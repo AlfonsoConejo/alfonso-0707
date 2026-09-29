@@ -2,7 +2,13 @@ import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { X } from 'lucide-react'
 import snailPayLogo from '../assets/snailpay-logo.svg'
-import type { RechargeFormData, RechargeFormErrors } from '../types/payment'
+import type {
+  RechargeFormData,
+  RechargeFormErrors,
+  RechargeRequest,
+  SnailPayTransaction,
+} from '../types/payment'
+import { useAuth } from '../context/AuthContext'
 
 type RechargeModalProps = {
   isOpen: boolean
@@ -25,20 +31,23 @@ function isExpirationDateValid(value: string) {
   return year > currentYear || (year === currentYear && month >= currentMonth)
 }
 
-function formatAmountFromCents(value: string) {
-  if (!value) {
-    return ''
-  }
+function getTransactionHistory(): SnailPayTransaction[] {
+  try {
+    const storedTransactions = localStorage.getItem('snailpayTransaction')
 
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(Number(value) / 100)
+    if (!storedTransactions) {
+      return []
+    }
+
+    const parsedTransactions: unknown = JSON.parse(storedTransactions)
+    return Array.isArray(parsedTransactions) ? (parsedTransactions as SnailPayTransaction[]) : []
+  } catch {
+    return []
+  }
 }
 
 export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
+  const { user, addBalance } = useAuth()
   const [rechargeData, setRechargeData] = useState<RechargeFormData>({
     cardholderName: '',
     cardNumber: '',
@@ -47,6 +56,9 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
     amount: '',
   })
   const [errors, setErrors] = useState<RechargeFormErrors>({})
+  const [requestMessage, setRequestMessage] = useState('')
+  const [serverErrors, setServerErrors] = useState<string[]>([])
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const hasEmptyFields = Object.values(rechargeData).some((value) => !value.trim())
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -70,10 +82,6 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
       value = digits.length > 2 ? digits.slice(0, 2) + '/' + digits.slice(2) : digits
     }
 
-    if (field === 'amount') {
-      value = value.replace(/\D/g, '').slice(-10)
-    }
-
     setRechargeData((currentData) => ({
       ...currentData,
       [field]: value,
@@ -82,9 +90,11 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
       ...currentErrors,
       [field]: undefined,
     }))
+    setRequestMessage('')
+    setServerErrors([])
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const validationErrors: RechargeFormErrors = {}
     const normalizedName = rechargeData.cardholderName.trim().replace(/\s+/g, ' ')
@@ -105,18 +115,84 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
       validationErrors.expirationDate = 'Ingresa una fecha válida y que no esté vencida.'
     }
 
-    if (Number(rechargeData.amount) <= 0) {
-      validationErrors.amount = 'Ingresa un monto mayor a $0.00.'
+    if (!/^\d+(?:\.\d{1,2})?$/.test(rechargeData.amount) || Number(rechargeData.amount) <= 0) {
+      validationErrors.amount = 'Ingresa un monto válido mayor a $0.00.'
     }
 
-    setRechargeData((currentData) => ({
-      ...currentData,
+    const rechargePayload: RechargeFormData = {
+      ...rechargeData,
       cardholderName: normalizedName,
-    }))
+    }
+
+    setRechargeData(rechargePayload)
     setErrors(validationErrors)
 
     if (Object.keys(validationErrors).length > 0) {
       return
+    }
+
+    if (!user) {
+      setServerErrors(['No se encontró una sesión activa.'])
+      return
+    }
+
+    const requestBody: RechargeRequest = {
+      ...rechargePayload,
+      amount: Number(rechargePayload.amount),
+      userId: user.id,
+      userEmail: user.email,
+    }
+
+    setIsSubmitting(true)
+    setRequestMessage('')
+    setServerErrors([])
+
+    try {
+      const response = await fetch('http://localhost:3000/api/recharge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      })
+      const responseBody = (await response.json()) as SnailPayTransaction | {
+        errors?: RechargeFormErrors
+      }
+
+      if (!response.ok) {
+        const messages = Object.values(
+          'errors' in responseBody ? responseBody.errors ?? {} : {},
+        ).filter(
+          (message): message is string => Boolean(message),
+        )
+        setServerErrors(
+          messages.length > 0 ? messages : ['No se pudo validar la solicitud de recarga.'],
+        )
+        return
+      }
+
+      const snailpayTransaction = responseBody as SnailPayTransaction
+      const transactionHistory = getTransactionHistory()
+
+      localStorage.setItem(
+        'snailpayTransaction',
+        JSON.stringify([...transactionHistory, snailpayTransaction]),
+      )
+
+      const isApprovedTransaction =
+        snailpayTransaction.status === 'approved' &&
+        snailpayTransaction.status_detail === 'accredited'
+
+      if (isApprovedTransaction) {
+        addBalance(snailpayTransaction.transaction_amount)
+        setRequestMessage('Recarga acreditada correctamente.')
+      } else {
+        setRequestMessage('Solicitud de recarga recibida.')
+      }
+    } catch {
+      setServerErrors(['No fue posible conectar con SnailPay.'])
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -150,6 +226,7 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
               Powered by SnailPay
             </p>
           </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -270,10 +347,12 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
             <input
               id="recharge-amount"
               name="amount"
-              type="text"
+              type="number"
+              min="0.01"
+              step="0.01"
               inputMode="decimal"
-              placeholder="$0.00"
-              value={formatAmountFromCents(rechargeData.amount)}
+              placeholder="0.00"
+              value={rechargeData.amount}
               onChange={handleChange}
               aria-invalid={Boolean(errors.amount)}
               className={[
@@ -288,13 +367,31 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
             )}
           </label>
 
+          {serverErrors.length > 0 && (
+            <div className="rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-800" role="alert">
+              <ul className="list-inside list-disc space-y-1">
+                {serverErrors.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={hasEmptyFields}
+            disabled={hasEmptyFields || isSubmitting}
             className="mt-2 h-12 rounded-lg bg-[#7BAE8A] px-4 text-base font-bold text-white transition-colors hover:bg-[#628F70] focus:outline-none focus:ring-3 focus:ring-[#7BAE8A]/30 disabled:cursor-not-allowed disabled:bg-[#7BAE8A]/50 disabled:hover:bg-[#7BAE8A]/50"
           >
-            Recargar saldo
+            {isSubmitting ? 'Enviando solicitud...' : 'Recargar saldo'}
           </button>
+          {requestMessage && (
+            <p
+              className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800"
+              role="status"
+            >
+              {requestMessage}
+            </p>
+          )}
         </form>
       </section>
     </div>
