@@ -48,8 +48,7 @@ export default function LoginForm() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-5 py-14 text-zinc-900 sm:py-18">
-      <section className="mx-auto w-full max-w-md" aria-labelledby="login-title">
+    <section className="mx-auto w-full max-w-md text-zinc-900" aria-labelledby="login-title">
         <header className="mb-6 text-center">
           <img
             src={snailLogo}
@@ -109,7 +108,6 @@ export default function LoginForm() {
           </button>
           </form>
         </div>
-      </section>
-    </main>
+    </section>
   )
 }

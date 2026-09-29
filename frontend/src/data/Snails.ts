@@ -1,6 +1,6 @@
 export const snailNames = [
   'Gary',
-  'Pedro',
+  'Marco Polo',
   'José Luis',
   'San Pedro',
   'Anastacio',

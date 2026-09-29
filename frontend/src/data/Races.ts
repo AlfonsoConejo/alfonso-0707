@@ -6,14 +6,14 @@ export const raceHistory: Race[] = [
     date: '2026-09-28T10:00:00',
     winner: 'Gary',
     bet: {
-      snail: 'Pedro',
+      snail: 'Marco Polo',
       amount: 50,
     },
   },
   {
     id: 17,
     date: '2026-09-28T11:00:00',
-    winner: 'Pedro',
+    winner: 'Marco Polo',
     bet: null,
   },
   {
@@ -45,7 +45,7 @@ export const raceHistory: Race[] = [
     date: '2026-09-28T18:00:00',
     winner: 'San Pedro',
     bet: {
-      snail: 'Pedro',
+      snail: 'Marco Polo',
       amount: 30,
     },
   },
@@ -63,7 +63,7 @@ export const raceHistory: Race[] = [
     date: '2026-09-27T11:00:00',
     winner: 'Gary',
     bet: {
-        snail: 'Pedro',
+        snail: 'Marco Polo',
         amount: 20,
     },
   },
@@ -100,9 +100,9 @@ export const raceHistory: Race[] = [
   {
     id: 6,
     date: '2026-09-26T10:00:00',
-    winner: 'Pedro',
+    winner: 'Marco Polo',
     bet: {
-      snail: 'Pedro',
+      snail: 'Marco Polo',
       amount: 30,
     },
   },

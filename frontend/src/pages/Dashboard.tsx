@@ -1,4 +1,3 @@
-import Header from '../components/Header'
 import { useAuth } from '../context/AuthContext'
 import { Wallet } from 'lucide-react'
 import BetsDonutChart from '../components/BetsDonutChart';
@@ -45,19 +44,25 @@ export default function Dashboard() {
   console.log('Snail Wins on 2026-09-28:', snailWinsOnSpecificDate);
 
   return (
-    <div className="min-h-screen bg-white text-zinc-900">
-      <Header />
-      <main className="mx-auto w-full max-w-6xl px-5 py-8">
+    <main className="mx-auto w-full max-w-6xl px-5 py-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-3xl font-bold">Mi Tablero</h1>
           <div className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-2 text-sm font-semibold text-zinc-700">
             <Wallet aria-hidden="true" className="h-4 w-4" />
             <span>{balance}</span>
+            <button
+              type="button"
+              className="rounded-full bg-[#7BAE8A] px-3 py-1 text-xs font-bold text-white transition-colors hover:bg-[#628F70]"
+            >
+              Recargar
+            </button>
           </div>
-          <BetsDonutChart wonRaces={wonRaces} lostRaces={lostRaces} />
         </div>
-        <SnailWinsChart snailWinsOnSpecificDate={snailWinsOnSpecificDate} />
-      </main>
-    </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <BetsDonutChart wonRaces={wonRaces} lostRaces={lostRaces} />
+          <SnailWinsChart snailWinsOnSpecificDate={snailWinsOnSpecificDate} />
+        </div>
+    </main>
   )
 }

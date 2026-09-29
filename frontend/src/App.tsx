@@ -3,6 +3,8 @@ import SignupForm from './pages/SignupForm'
 import LoginForm from './pages/LoginForm'
 import Dashboard from './pages/Dashboard'
 import { useAuth } from './context/AuthContext'
+import AuthLayout from './layouts/AuthLayout'
+import AppLayout from './layouts/AppLayout'
 import './App.css'
 
 function ProtectedRoute() {
@@ -22,9 +24,9 @@ function App() {
     <>
       <Routes>
         <Route element={<PublicOnlyRoute />}>
-          <Route path="/" element={<LoginForm />} />
+          <Route path="/" element={<Navigate to="/auth/login" replace />} />
 
-          <Route path="/auth">
+          <Route path="/auth" element={<AuthLayout />}>
             <Route index element={<Navigate to="login" replace />} />
             <Route path="login" element={<LoginForm />} />
             <Route path="signup" element={<SignupForm />} />
@@ -33,7 +35,7 @@ function App() {
         </Route>
         
         <Route element={<ProtectedRoute />}>
-          <Route path="/app">
+          <Route path="/app" element={<AppLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
           </Route>
