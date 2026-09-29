@@ -74,6 +74,7 @@ export default function SignupForm() {
 
     const passwordHash = await hashPassword(userData.password)
     const registeredUser: RegisteredUser = {
+      id: crypto.randomUUID(),
       fullName: userData.fullName,
       email: normalizedEmail,
       balance: 0,

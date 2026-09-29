@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { Wallet } from 'lucide-react'
 import BetsDonutChart from '../components/BetsDonutChart';
@@ -5,9 +6,11 @@ import SnailWinsChart from '../components/SnailWinsCharts';
 import {raceHistory} from '../data/Races'
 import type { Race } from '../types/racesRecord'
 import { snailNames, type SnailName } from '../data/Snails';
+import RechargeModal from '../components/RechargeModal'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false)
   const balance = new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
@@ -52,6 +55,7 @@ export default function Dashboard() {
             <span>{balance}</span>
             <button
               type="button"
+              onClick={() => setIsRechargeModalOpen(true)}
               className="rounded-full bg-[#7BAE8A] px-3 py-1 text-xs font-bold text-white transition-colors hover:bg-[#628F70]"
             >
               Recargar
@@ -63,6 +67,10 @@ export default function Dashboard() {
           <BetsDonutChart wonRaces={wonRaces} lostRaces={lostRaces} />
           <SnailWinsChart snailWinsOnSpecificDate={snailWinsOnSpecificDate} />
         </div>
+        <RechargeModal
+          isOpen={isRechargeModalOpen}
+          onClose={() => setIsRechargeModalOpen(false)}
+        />
     </main>
   )
 }
