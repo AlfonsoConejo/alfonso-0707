@@ -1,17 +1,117 @@
 import { useState } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
+import {hashPassword } from '../../utils'
+import { useNavigate } from 'react-router-dom'
+
+type SignupFormData = {
+  fullName: string
+  email: string
+  password: string
+  confirmPassword: string
+}
+
+type SignupFormErrors = {
+  form?: string
+  fullName?: string
+  email?: string
+  password?: string
+  confirmPassword?: string
+}
+
+type RegisteredUser = Omit<SignupFormData, 'password' | 'confirmPassword'> & {
+  passwordHash: string
+}
+
+function getRegisteredUsers(): RegisteredUser[] {
+  try {
+    const storedUsers = localStorage.getItem('registeredUsers')
+
+    if (!storedUsers) {
+      return []
+    }
+
+    const parsedUsers: unknown = JSON.parse(storedUsers)
+    return Array.isArray(parsedUsers) ? (parsedUsers as RegisteredUser[]) : []
+  } catch {
+    return []
+  }
+}
 
 export default function SignupForm() {
-  const [showRequiredMessage, setShowRequiredMessage] = useState(false)
+  const navigate = useNavigate()
+  const [userData, setUserData] = useState<SignupFormData>({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
+  const [errors, setErrors] = useState<SignupFormErrors>({})
+  const hasEmptyFields = Object.values(userData).some((field) => !field.trim())
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleChange(event: ChangeEvent<HTMLInputElement>) {
+    const field = event.target.name as keyof SignupFormData
+
+    setUserData((currentData) => ({
+      ...currentData,
+      [field]: event.target.value,
+    }))
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
-    const hasEmptyField = ['fullName', 'email', 'password', 'confirmPassword'].some(
-      (field) => !formData.get(field)?.toString().trim(),
+    const validationErrors: SignupFormErrors = {}
+
+    if (hasEmptyFields) {
+      validationErrors.form = 'Es obligatorio llenar todos los campos.'
+    } else {
+      const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)
+      const nameHasLetter = /\p{L}/u.test(userData.fullName)
+
+      if (!emailIsValid) {
+        validationErrors.email = 'Ingresa un correo electrónico válido.'
+      }
+
+      if (!nameHasLetter || userData.fullName.length > 60) {
+        validationErrors.fullName =
+          'El nombre debe incluir al menos una letra y tener un máximo de 60 caracteres.'
+      }
+
+      if (userData.password.length < 6) {
+        validationErrors.password = 'La contraseña debe tener al menos 6 caracteres.'
+      }
+
+      if (userData.password !== userData.confirmPassword) {
+        validationErrors.confirmPassword = 'Las contraseñas deben coincidir.'
+      }
+    }
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      return
+    }
+
+    const normalizedEmail = userData.email.trim().toLowerCase()
+    const registeredUsers = getRegisteredUsers()
+    const emailAlreadyExists = registeredUsers.some(
+      (registeredUser) => registeredUser.email.toLowerCase() === normalizedEmail,
     )
 
-    setShowRequiredMessage(hasEmptyField)
+    if (emailAlreadyExists) {
+      setErrors({ email: 'Este correo ya está registrado.' })
+      return
+    }
+
+    const passwordHash = await hashPassword(userData.password)
+    const registeredUser: RegisteredUser = {
+      fullName: userData.fullName,
+      email: normalizedEmail,
+      passwordHash,
+    }
+
+    localStorage.setItem('registeredUsers', JSON.stringify([...registeredUsers, registeredUser]))
+    setErrors({})
+    navigate('/dashboard')
   }
 
   return (
@@ -36,6 +136,8 @@ export default function SignupForm() {
               id="email"
               name="email"
               type="email"
+              value={userData.email}
+              onChange={handleChange}
               className="h-11 rounded-sm border-2 border-[#7BAE8A] bg-white px-3 text-base font-normal outline-none focus:ring-2 focus:ring-[#7BAE8A]/25"
             />
           </label>
@@ -46,6 +148,9 @@ export default function SignupForm() {
               id="fullName"
               name="fullName"
               type="text"
+              maxLength={60}
+              value={userData.fullName}
+              onChange={handleChange}
               className="h-11 rounded-sm border border-zinc-400 bg-white px-3 text-base font-normal outline-none focus:border-[#7BAE8A] focus:ring-2 focus:ring-[#7BAE8A]/25"
             />
           </label>
@@ -56,6 +161,8 @@ export default function SignupForm() {
               id="password"
               name="password"
               type="password"
+              value={userData.password}
+              onChange={handleChange}
               className="h-11 rounded-sm border border-zinc-400 bg-white px-3 text-base font-normal outline-none focus:border-[#7BAE8A] focus:ring-2 focus:ring-[#7BAE8A]/25"
             />
           </label>
@@ -66,22 +173,29 @@ export default function SignupForm() {
               id="confirmPassword"
               name="confirmPassword"
               type="password"
+              value={userData.confirmPassword}
+              onChange={handleChange}
               className="h-11 rounded-sm border border-zinc-400 bg-white px-3 text-base font-normal outline-none focus:border-[#7BAE8A] focus:ring-2 focus:ring-[#7BAE8A]/25"
             />
           </label>
 
-          {showRequiredMessage && (
-            <p
+          {Object.values(errors).length > 0 && (
+            <div
               className="rounded-sm bg-red-100 px-3 py-2 text-sm font-medium text-red-800"
               role="alert"
             >
-              Es obligatorio llenar todos los campos.
-            </p>
+              <ul className="list-inside list-disc space-y-1">
+                {Object.values(errors).map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <button
             type="submit"
-            className="mt-1 h-11 rounded-sm bg-[#7BAE8A] px-4 text-base font-bold text-white transition-colors hover:bg-[#628F70] focus:outline-none focus:ring-3 focus:ring-[#7BAE8A]/30 cursor-pointer"
+            disabled={hasEmptyFields}
+            className="mt-1 h-11 rounded-sm bg-[#7BAE8A] px-4 text-base font-bold text-white transition-colors hover:bg-[#628F70] focus:outline-none focus:ring-3 focus:ring-[#7BAE8A]/30 disabled:cursor-not-allowed disabled:bg-[#7BAE8A]/50 disabled:text-white disabled:hover:bg-[#7BAE8A]/50"
           >
             Registrarme
           </button>

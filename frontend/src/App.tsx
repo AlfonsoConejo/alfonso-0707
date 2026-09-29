@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import SignupForm from './pages/SignupForm'
 import LoginForm from './pages/LoginForm'
+import Dashboard from './pages/Dashboard'
 import './App.css'
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
     <>
       <Routes>
         <Route path="/" element={<LoginForm />} />
+        <Route path="/dashboard" element={<Dashboard />} />
 
         <Route path="/auth">
           <Route index element={<Navigate to="login" replace />} />
