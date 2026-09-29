@@ -25,3 +25,11 @@ export type RegisteredUser = Omit<SignupFormData, 'password' | 'confirmPassword'
 }
 
 export type AuthUser = Omit<RegisteredUser, 'passwordHash'>
+
+export type AuthContextValue = {
+  user: AuthUser | null
+  isAuthenticated: boolean
+  login: (user: AuthUser) => void
+  addBalance: (amount: number) => void
+  logout: () => void
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react';
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import snailLogoWhite from '../assets/snail-logo-white.png'
 
 export default function Header() {

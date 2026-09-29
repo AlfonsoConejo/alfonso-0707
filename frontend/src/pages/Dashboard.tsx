@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { Wallet } from 'lucide-react'
 import BetsDonutChart from '../components/BetsDonutChart';
 import SnailWinsChart from '../components/SnailWinsCharts';

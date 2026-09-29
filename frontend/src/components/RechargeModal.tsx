@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { X } from 'lucide-react'
+import { toast } from 'sonner'
 import snailPayLogo from '../assets/snailpay-logo.svg'
 import type {
   RechargeFormData,
@@ -8,12 +9,22 @@ import type {
   RechargeRequest,
   SnailPayTransaction,
 } from '../types/payment'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 type RechargeModalProps = {
   isOpen: boolean
   onClose: () => void
 }
+
+const initialRechargeData: RechargeFormData = {
+  cardholderName: '',
+  cardNumber: '',
+  expirationDate: '',
+  cvv: '',
+  amount: '',
+}
+
+const RECHARGE_TIMEOUT_MS = 10_000
 
 function isExpirationDateValid(value: string) {
   const match = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(value)
@@ -46,20 +57,53 @@ function getTransactionHistory(): SnailPayTransaction[] {
   }
 }
 
+function isSnailPayTransaction(value: unknown): value is SnailPayTransaction {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  const transaction = value as Partial<SnailPayTransaction>
+
+  return (
+    typeof transaction.id === 'string' &&
+    typeof transaction.status === 'string' &&
+    typeof transaction.status_detail === 'string' &&
+    typeof transaction.transaction_amount === 'number'
+  )
+}
+
+function isTransactionError(value: unknown): value is SnailPayTransaction {
+  return (
+    isSnailPayTransaction(value) &&
+    (value.status === 'rejected' || value.status === 'error')
+  )
+}
+
+function getTransactionErrorMessage(statusDetail: SnailPayTransaction['status_detail']) {
+  const messages: Partial<Record<SnailPayTransaction['status_detail'], string>> = {
+    insufficient_funds: 'Fondos insuficientes para procesar la recarga.',
+    invalid_card_number: 'El número de tarjeta no es válido.',
+    internal_error: 'SnailPay tuvo un error interno. Intenta de nuevo más tarde.',
+  }
+
+  return messages[statusDetail] ?? 'La recarga fue rechazada por SnailPay.'
+}
+
 export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
   const { user, addBalance } = useAuth()
-  const [rechargeData, setRechargeData] = useState<RechargeFormData>({
-    cardholderName: '',
-    cardNumber: '',
-    expirationDate: '',
-    cvv: '',
-    amount: '',
-  })
+  const [rechargeData, setRechargeData] = useState<RechargeFormData>(initialRechargeData)
   const [errors, setErrors] = useState<RechargeFormErrors>({})
   const [requestMessage, setRequestMessage] = useState('')
   const [serverErrors, setServerErrors] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const hasEmptyFields = Object.values(rechargeData).some((value) => !value.trim())
+
+  function resetForm() {
+    setRechargeData(initialRechargeData)
+    setErrors({})
+    setRequestMessage('')
+    setServerErrors([])
+  }
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const field = event.target.name as keyof RechargeFormData
@@ -146,6 +190,8 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
     setIsSubmitting(true)
     setRequestMessage('')
     setServerErrors([])
+    const abortController = new AbortController()
+    const timeoutId = window.setTimeout(() => abortController.abort(), RECHARGE_TIMEOUT_MS)
 
     try {
       const response = await fetch('http://localhost:3000/api/recharge', {
@@ -154,15 +200,27 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
+        signal: abortController.signal,
       })
-      const responseBody = (await response.json()) as SnailPayTransaction | {
-        errors?: RechargeFormErrors
+      const responseBody: unknown = await response.json()
+
+      if (isSnailPayTransaction(responseBody)) {
+        const transactionHistory = getTransactionHistory()
+
+        localStorage.setItem(
+          'snailpayTransaction',
+          JSON.stringify([...transactionHistory, responseBody]),
+        )
       }
 
       if (!response.ok) {
-        const messages = Object.values(
-          'errors' in responseBody ? responseBody.errors ?? {} : {},
-        ).filter(
+        if (isTransactionError(responseBody)) {
+          setServerErrors([getTransactionErrorMessage(responseBody.status_detail)])
+          return
+        }
+
+        const validationResponse = responseBody as { errors?: Record<string, string> }
+        const messages = Object.values(validationResponse.errors ?? {}).filter(
           (message): message is string => Boolean(message),
         )
         setServerErrors(
@@ -172,12 +230,6 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
       }
 
       const snailpayTransaction = responseBody as SnailPayTransaction
-      const transactionHistory = getTransactionHistory()
-
-      localStorage.setItem(
-        'snailpayTransaction',
-        JSON.stringify([...transactionHistory, snailpayTransaction]),
-      )
 
       const isApprovedTransaction =
         snailpayTransaction.status === 'approved' &&
@@ -185,13 +237,20 @@ export default function RechargeModal({ isOpen, onClose }: RechargeModalProps) {
 
       if (isApprovedTransaction) {
         addBalance(snailpayTransaction.transaction_amount)
-        setRequestMessage('Recarga acreditada correctamente.')
+        resetForm()
+        onClose()
+        toast.success('La recarga se procesó correctamente.')
       } else {
         setRequestMessage('Solicitud de recarga recibida.')
       }
-    } catch {
-      setServerErrors(['No fue posible conectar con SnailPay.'])
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setServerErrors(['SnailPay tardó demasiado en responder. Intenta de nuevo.'])
+      } else {
+        setServerErrors(['No fue posible conectar con SnailPay.'])
+      }
     } finally {
+      window.clearTimeout(timeoutId)
       setIsSubmitting(false)
     }
   }

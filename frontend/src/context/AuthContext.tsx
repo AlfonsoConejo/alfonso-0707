@@ -1,18 +1,10 @@
-import { createContext, useContext, useState } from 'react'
+import { useState } from 'react'
 import type { ReactNode } from 'react'
 import type { AuthUser } from '../types/auth'
 import { getRegisteredUsers } from '../../utils'
-
-type AuthContextValue = {
-  user: AuthUser | null
-  isAuthenticated: boolean
-  login: (user: AuthUser) => void
-  addBalance: (amount: number) => void
-  logout: () => void
-}
+import { AuthContext } from '../hooks/useAuth'
 
 const SESSION_KEY = 'currentUser'
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 function getStoredUser(): AuthUser | null {
   try {
@@ -63,14 +55,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth debe usarse dentro de AuthProvider.')
-  }
-
-  return context
 }

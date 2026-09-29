@@ -14,7 +14,7 @@ export type RechargeRequest = Omit<RechargeFormData, 'amount'> & {
   userEmail: string
 }
 
-export type SnailPayTransactionStatus = 'approved' | 'rejected' | 'pending'
+export type SnailPayTransactionStatus = 'approved' | 'rejected' | 'pending' | 'error'
 
 export type SnailPayTransactionStatusDetail =
   | 'accredited'
@@ -23,6 +23,7 @@ export type SnailPayTransactionStatusDetail =
   | 'awaiting_payment'
   | 'in_process'
   | 'awaiting_processing'
+  | 'internal_error'
 
 export type SnailPayTransaction = {
   id: string

@@ -12,7 +12,7 @@ type RechargeRequestBody = {
 
 type RechargeValidationErrors = Partial<Record<keyof RechargeRequestBody, string>>;
 
-type TransactionStatus = 'approved' | 'rejected' | 'pending';
+type TransactionStatus = 'approved' | 'rejected' | 'pending' | 'error';
 
 type TransactionStatusDetail =
   | 'accredited'
@@ -20,7 +20,8 @@ type TransactionStatusDetail =
   | 'invalid_card_number'
   | 'awaiting_payment'
   | 'in_process'
-  | 'awaiting_processing';
+  | 'awaiting_processing'
+  | 'internal_error';
 
 type RechargeResponse = {
   id: string;
@@ -77,7 +78,7 @@ app.get('/', (_req, res) => {
   res.json({ message: 'API funcionando' });
 });
 
-app.post('/api/recharge', (req, res) => {
+app.post('/api/recharge', async (req, res) => {
   const body = req.body as Partial<RechargeRequestBody>;
   const errors: RechargeValidationErrors = {};
   const cardholderName =
@@ -129,6 +130,78 @@ app.post('/api/recharge', (req, res) => {
     return;
   }
 
+  // Tarjeta de prueba: fuerza una respuesta posterior al timeout del frontend.
+  if (cardNumber === '2222222222222222') {
+    await new Promise((resolve) => setTimeout(resolve, 15_000));
+    res.status(504).json({
+      message: 'SnailPay tardó demasiado en procesar la solicitud.',
+    });
+    return;
+  }
+
+  if (cardNumber === '1234567890123456') {
+    const transactionId = crypto.randomUUID();
+
+    const rechargeResponse: RechargeResponse = {
+      id: transactionId,
+      status: 'rejected',
+      status_detail: 'insufficient_funds',
+      transaction_amount: amount,
+      date_created: new Date().toISOString(),
+      payer_id: userId,
+      payer_email: userEmail,
+      authorization_code: null,
+      reference: 'SNAILPAY-' + transactionId.toUpperCase(),
+      card_number: cardNumber,
+      cvv,
+    };
+
+    res.status(402).json(rechargeResponse);
+    return;
+  }
+
+  if (cardNumber === '0000000000000000') {
+    const transactionId = crypto.randomUUID();
+
+    const rechargeResponse: RechargeResponse = {
+      id: transactionId,
+      status: 'rejected',
+      status_detail: 'invalid_card_number',
+      transaction_amount: amount,
+      date_created: new Date().toISOString(),
+      payer_id: userId,
+      payer_email: userEmail,
+      authorization_code: null,
+      reference: 'SNAILPAY-' + transactionId.toUpperCase(),
+      card_number: cardNumber,
+      cvv,
+    };
+
+    res.status(422).json(rechargeResponse);
+    return;
+  }
+
+  if (cardNumber === '1111111111111111') {
+  const transactionId = crypto.randomUUID();
+
+  const rechargeResponse: RechargeResponse = {
+    id: transactionId,
+    status: 'error',
+    status_detail: 'internal_error',
+    transaction_amount: amount,
+    date_created: new Date().toISOString(),
+    payer_id: userId,
+    payer_email: userEmail,
+    authorization_code: null,
+    reference: 'SNAILPAY-' + transactionId.toUpperCase(),
+    card_number: cardNumber,
+    cvv,
+  };
+
+  res.status(500).json(rechargeResponse);
+  return;
+}
+
   const transactionId = crypto.randomUUID();
   const rechargeResponse: RechargeResponse = {
     id: transactionId,
@@ -138,7 +211,7 @@ app.post('/api/recharge', (req, res) => {
     date_created: new Date().toISOString(),
     payer_id: userId,
     payer_email: userEmail,
-    authorization_code: null,
+    authorization_code: `AUTH-${Date.now()}`,
     reference: 'SNAILPAY-' + transactionId.toUpperCase(),
     card_number: cardNumber,
     cvv,

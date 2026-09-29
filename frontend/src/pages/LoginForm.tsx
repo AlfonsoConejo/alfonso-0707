@@ -3,7 +3,7 @@ import type { ChangeEvent } from 'react'
 import { getRegisteredUsers, hashPassword } from '../../utils'
 import { useNavigate } from 'react-router-dom'
 import type { LoginFormData } from '../types/auth'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import snailLogo from '../assets/snail-logo.png'
 
 export default function LoginForm() {
