@@ -1,44 +1,13 @@
 import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
-import {hashPassword } from '../../utils'
+import { getRegisteredUsers, hashPassword } from '../../utils'
 import { useNavigate } from 'react-router-dom'
-
-type SignupFormData = {
-  fullName: string
-  email: string
-  password: string
-  confirmPassword: string
-}
-
-type SignupFormErrors = {
-  form?: string
-  fullName?: string
-  email?: string
-  password?: string
-  confirmPassword?: string
-}
-
-type RegisteredUser = Omit<SignupFormData, 'password' | 'confirmPassword'> & {
-  passwordHash: string
-}
-
-function getRegisteredUsers(): RegisteredUser[] {
-  try {
-    const storedUsers = localStorage.getItem('registeredUsers')
-
-    if (!storedUsers) {
-      return []
-    }
-
-    const parsedUsers: unknown = JSON.parse(storedUsers)
-    return Array.isArray(parsedUsers) ? (parsedUsers as RegisteredUser[]) : []
-  } catch {
-    return []
-  }
-}
+import type { RegisteredUser, SignupFormData, SignupFormErrors } from '../types/auth'
+import { useAuth } from '../context/AuthContext'
 
 export default function SignupForm() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [userData, setUserData] = useState<SignupFormData>({
     fullName: '',
     email: '',
@@ -111,7 +80,8 @@ export default function SignupForm() {
 
     localStorage.setItem('registeredUsers', JSON.stringify([...registeredUsers, registeredUser]))
     setErrors({})
-    navigate('/dashboard')
+    login(registeredUser)
+    navigate('/app/dashboard')
   }
 
   return (
