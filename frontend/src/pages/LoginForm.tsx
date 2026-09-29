@@ -4,6 +4,7 @@ import { getRegisteredUsers, hashPassword } from '../../utils'
 import { useNavigate } from 'react-router-dom'
 import type { LoginFormData } from '../types/auth'
 import { useAuth } from '../context/AuthContext'
+import snailLogo from '../assets/snail-logo.png'
 
 export default function LoginForm() {
   const navigate = useNavigate()
@@ -49,19 +50,26 @@ export default function LoginForm() {
   return (
     <main className="min-h-screen bg-white px-5 py-14 text-zinc-900 sm:py-18">
       <section className="mx-auto w-full max-w-md" aria-labelledby="login-title">
-        <header className="mb-9 text-center">
-          <h1 id="login-title" className="text-3xl font-medium leading-tight tracking-tight sm:text-4xl">
-            Inicia sesión
-          </h1>
+        <header className="mb-6 text-center">
+          <img
+            src={snailLogo}
+            alt="Logo de Snail Races"
+            className="mx-auto mb-3 h-20 w-20 object-contain"
+          />
+        </header>
+
+        <div className="rounded-2xl bg-white p-6 shadow-[0_0_5px_rgba(123,174,138,0.35)] sm:p-8">
+          <div className="mb-9 text-center">
+          <p className="mt-1 text-lg font-medium">Inicia sesión</p>
           <p className="mt-2 text-base sm:text-lg">
             ¿Aún no tienes una cuenta?{' '}
             <a href="/auth/signup" className="text-[#7BAE8A] underline-offset-4 hover:underline">
               Regístrate
             </a>
           </p>
-        </header>
+          </div>
 
-        <form className="grid gap-5" onSubmit={handleSubmit} noValidate>
+          <form className="grid gap-5" onSubmit={handleSubmit} noValidate>
           <label htmlFor="email" className="grid gap-2 text-sm font-bold">
             Correo electrónico
             <input
@@ -99,7 +107,8 @@ export default function LoginForm() {
           >
             Iniciar sesión
           </button>
-        </form>
+          </form>
+        </div>
       </section>
     </main>
   )
