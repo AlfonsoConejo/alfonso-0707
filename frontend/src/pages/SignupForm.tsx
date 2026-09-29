@@ -81,7 +81,7 @@ export default function SignupForm() {
     localStorage.setItem('registeredUsers', JSON.stringify([...registeredUsers, registeredUser]))
     setErrors({})
     login(registeredUser)
-    navigate('/app/dashboard')
+    navigate('/app/dashboard', { replace: true })
   }
 
   return (

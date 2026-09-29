@@ -43,7 +43,7 @@ export default function LoginForm() {
 
     setError('')
     login(registeredUser)
-    navigate('/app/dashboard')
+    navigate('/app/dashboard', { replace: true })
   }
 
   return (
