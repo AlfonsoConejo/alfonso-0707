@@ -76,6 +76,7 @@ export default function SignupForm() {
     const registeredUser: RegisteredUser = {
       fullName: userData.fullName,
       email: normalizedEmail,
+      balance: 0,
       passwordHash,
     }
 

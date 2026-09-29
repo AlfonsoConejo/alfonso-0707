@@ -42,41 +42,45 @@ export default function Header() {
           />
           <p className="text-xl font-bold">Snail Races</p>
         </div>
-        <div ref={userMenuRef} className="relative">
-          <div
-            className={[
-              'h-8 w-8 rounded-md border text-white transition-colors',
-              isMenuOpen
-                ? 'border-white bg-white/15'
-                : 'border-transparent hover:bg-white/15',
-            ].join(' ')}
-          >
-            <button
-              type="button"
-              aria-label="Abrir menú de usuario"
-              aria-expanded={isMenuOpen}
-              onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
-              className="grid h-full w-full place-items-center rounded-[inherit] focus:outline-none focus:ring-2 focus:ring-white/70"
-            >
-              <User aria-hidden="true" className="h-6 w-6" />
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium sm:text-base">Hola, {user?.fullName ?? 'corredor'}</p>
 
-          {isMenuOpen && (
-            <div className="absolute right-0 top-12 z-10 w-64 rounded-lg bg-white p-2 text-zinc-900 shadow-lg shadow-black/15">
-              <div className="border-b border-zinc-200 px-3 py-2">
-                <p className="text-xs font-medium text-zinc-500">Sesión activa</p>
-                <p className="mt-1 truncate text-sm font-semibold">{user?.email}</p>
-              </div>
+          <div ref={userMenuRef} className="relative">
+            <div
+              className={[
+                'h-8 w-8 rounded-md border text-white transition-colors',
+                isMenuOpen
+                  ? 'border-white bg-white/15'
+                  : 'border-transparent hover:bg-white/15',
+              ].join(' ')}
+            >
               <button
                 type="button"
-                onClick={handleLogout}
-                className="mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                aria-label="Abrir menú de usuario"
+                aria-expanded={isMenuOpen}
+                onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
+                className="grid h-full w-full place-items-center rounded-[inherit] focus:outline-none focus:ring-2 focus:ring-white/70"
               >
-                Cerrar sesión
+                <User aria-hidden="true" className="h-6 w-6" />
               </button>
             </div>
-          )}
+
+            {isMenuOpen && (
+              <div className="absolute right-0 top-12 z-10 w-64 rounded-lg bg-white p-2 text-zinc-900 shadow-lg shadow-black/15">
+                <div className="border-b border-zinc-200 px-3 py-2">
+                  <p className="text-xs font-medium text-zinc-500">Sesión activa</p>
+                  <p className="mt-1 truncate text-sm font-semibold">{user?.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

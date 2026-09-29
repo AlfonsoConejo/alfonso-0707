@@ -19,6 +19,7 @@ export type LoginFormData = {
 }
 
 export type RegisteredUser = Omit<SignupFormData, 'password' | 'confirmPassword'> & {
+  balance: number
   passwordHash: string
 }
 

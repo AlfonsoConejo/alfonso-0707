@@ -1,14 +1,62 @@
 import Header from '../components/Header'
 import { useAuth } from '../context/AuthContext'
+import { Wallet } from 'lucide-react'
+import BetsDonutChart from '../components/BetsDonutChart';
+import SnailWinsChart from '../components/SnailWinsCharts';
+import {raceHistory} from '../data/Races'
+import type { Race } from '../types/racesRecord'
+import { snailNames, type SnailName } from '../data/Snails';
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const balance = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(user?.balance ?? 0)
+
+  // Calculate won and lost races based on the raceHistory data
+  const { wonRaces, lostRaces } = raceHistory.reduce((accumulator: { wonRaces: number; lostRaces: number }, item: Race ) => {
+    if (item.bet && item.bet.snail === item.winner) {
+      accumulator.wonRaces++;
+    } 
+    if (item.bet && item.bet.snail !== item.winner) {
+      accumulator.lostRaces++;
+    }
+    return accumulator;
+  }, { wonRaces: 0, lostRaces: 0 });
+
+  // Get races from 2026-09-28
+  const racesOnSpecificDate = raceHistory.filter((race) => {
+    const raceDate = new Date(race.date);
+
+    return raceDate.toISOString().startsWith('2026-09-28');
+  });
+
+  // Initialize every snail with 0 wins
+  const snailWinsOnSpecificDate = Object.fromEntries(
+    snailNames.map((snail) => [snail, 0])
+  ) as Record<SnailName, number>;
+
+  // Count wins
+  racesOnSpecificDate.forEach((race) => {
+    snailWinsOnSpecificDate[race.winner]++;
+  });
+
+  console.log('Snail Wins on 2026-09-28:', snailWinsOnSpecificDate);
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
       <Header />
       <main className="mx-auto w-full max-w-6xl px-5 py-8">
-        <h1 className="text-3xl font-bold">Bienvenido, {user?.fullName}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold">Mi Tablero</h1>
+          <div className="flex items-center gap-2 rounded-full bg-zinc-100 px-3 py-2 text-sm font-semibold text-zinc-700">
+            <Wallet aria-hidden="true" className="h-4 w-4" />
+            <span>{balance}</span>
+          </div>
+          <BetsDonutChart wonRaces={wonRaces} lostRaces={lostRaces} />
+        </div>
+        <SnailWinsChart snailWinsOnSpecificDate={snailWinsOnSpecificDate} />
       </main>
     </div>
   )
